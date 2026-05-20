@@ -12,6 +12,7 @@
 - token 刷新时 access token 与 refresh token 成对刷新，旧 token 立即失效。
 - 鉴权接口使用请求头 `Service-Name` 和 `Access-Token`。
 - `serviceName` 支持中文；放在请求头里时建议先进行 URL 编码，服务端会先解码再比对。
+- 第三方服务可以通过公共接口获取本服务使用说明。
 - 所有时间在数据库中保存 Unix 秒级时间戳；接口返回时间戳和北京时间字符串。
 - 开发模式可通过 `model: dev` 在指定 IP 下跳过服务地址校验，禁止生产使用。
 
@@ -85,6 +86,14 @@ http://127.0.0.1:8080/
 
 JSON 字段使用 camelCase，请求头使用短横线命名，避免 Nginx 丢弃下划线请求头。
 如果服务名称包含中文，请求体里的 `serviceName` 可以直接使用 UTF-8 JSON；请求头 `Service-Name` 建议使用 URL 百分号编码。
+
+### 获取公共使用说明
+
+```http
+GET /api/public/usage
+```
+
+该接口无需登录，返回机器可读 JSON，包含可用接口、请求头、请求体字段、返回字段、错误码、中文服务名编码规则和开发模式说明。
 
 ### 永久授权码换 token
 

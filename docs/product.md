@@ -39,7 +39,23 @@
 - 特殊开发头按需求保留为 `model: dev`。
 - `serviceName` 支持中文。服务名放入请求头时建议先做 URL 百分号编码，例如浏览器使用 `encodeURIComponent(serviceName)`；服务端会先 URL 解码再保存或比对。
 
-## 4. 管理 API
+## 4. 公共说明 API
+
+第三方服务可以无需登录调用公共说明接口，获取本鉴权服务的机器可读使用说明。
+
+```http
+GET /api/public/usage
+```
+
+响应内容包括：
+
+- 可用服务 API。
+- 每个接口的方法、路径、请求头、请求体字段和成功响应字段。
+- 通用错误码。
+- `serviceName` 中文与 URL 编码规则。
+- `model: dev` 开发模式说明和生产禁用提醒。
+
+## 5. 管理 API
 
 除登录接口外，所有管理接口都需要管理员会话 Cookie：
 
@@ -47,7 +63,7 @@
 Cookie: authSession=<jwt>
 ```
 
-### 4.1 登录
+### 5.1 登录
 
 ```http
 POST /api/admin/login
@@ -74,7 +90,7 @@ Content-Type: application/json
 
 响应会设置 `authSession` HttpOnly Cookie。
 
-### 4.2 登出
+### 5.2 登出
 
 ```http
 POST /api/admin/logout
@@ -92,7 +108,7 @@ Cookie: authSession=<jwt>
 }
 ```
 
-### 4.3 服务列表
+### 5.3 服务列表
 
 ```http
 GET /api/admin/services
@@ -126,7 +142,7 @@ Cookie: authSession=<jwt>
 }
 ```
 
-### 4.4 注册服务
+### 5.4 注册服务
 
 ```http
 POST /api/admin/services
@@ -170,7 +186,7 @@ Content-Type: application/json
 }
 ```
 
-### 4.5 修改服务
+### 5.5 修改服务
 
 ```http
 PUT /api/admin/services/{id}
@@ -191,7 +207,7 @@ Content-Type: application/json
 
 修改后的服务名称和服务地址仍需要全局唯一。
 
-### 4.6 刷新服务 token 组
+### 5.6 刷新服务 token 组
 
 ```http
 POST /api/admin/services/{id}/tokens/refresh
@@ -213,11 +229,11 @@ Cookie: authSession=<jwt>
 }
 ```
 
-## 5. 服务 API
+## 6. 服务 API
 
 服务 API 均使用 JSON。正式模式下，服务 API 必须携带 `Origin` 或 `Referer`，系统会用其中的 origin 与注册服务地址匹配。
 
-### 5.1 永久授权码换 token
+### 6.1 永久授权码换 token
 
 ```http
 POST /api/token/exchange
@@ -247,7 +263,7 @@ Origin: https://billing.example.com
 }
 ```
 
-### 5.2 refresh token 刷新 token 组
+### 6.2 refresh token 刷新 token 组
 
 ```http
 POST /api/token/refresh
@@ -266,7 +282,7 @@ Origin: https://billing.example.com
 
 成功后旧 access token 和旧 refresh token 立即失效。
 
-### 5.3 鉴权校验
+### 6.3 鉴权校验
 
 ```http
 POST /api/auth/verify
@@ -288,7 +304,7 @@ Origin: https://billing.example.com
 
 失败响应使用 `401`、`403`、`404` 或 `429`。
 
-## 6. 开发模式
+## 7. 开发模式
 
 开发模式用于本地或测试环境验证服务 API。当请求满足以下条件时，只跳过服务地址校验：
 
@@ -305,7 +321,7 @@ Origin: https://billing.example.com
 
 开发模式禁止用于生产环境。
 
-## 7. 错误码约定
+## 8. 错误码约定
 
 - `400 Bad Request`：请求体格式错误或字段校验失败。
 - `401 Unauthorized`：管理员未登录、密码错误、token 错误或过期。

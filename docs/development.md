@@ -189,6 +189,7 @@ refresh token claims：
 路由：
 
 - `/`：UI 首页。
+- `/api/public/usage`
 - `/api/admin/login`
 - `/api/admin/logout`
 - `/api/admin/services`
@@ -201,6 +202,8 @@ refresh token claims：
 所有 JSON 请求体限制大小为 1 MiB。
 
 `serviceName` 支持中文。所有进入业务层的服务名都先执行 URL 百分号解码再 trim、保存或比对；用于请求头 `Service-Name` 时，调用方建议传递 `encodeURIComponent(serviceName)` 的结果。
+
+公共说明接口 `/api/public/usage` 无需登录，返回机器可读 JSON，覆盖可用服务 API、请求头、请求体、返回字段、错误码、中文服务名编码规则和开发模式提醒。
 
 ## 9. 测试策略
 
