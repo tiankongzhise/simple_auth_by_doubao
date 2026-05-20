@@ -1,22 +1,24 @@
 package store
 
-import "time"
-
 type Service struct {
-	ID                      int64      `json:"id"`
-	ServiceName             string     `json:"serviceName"`
-	ServiceURL              string     `json:"serviceUrl"`
-	AuthorizationCodeHash   string     `json:"-"`
-	AuthorizationCodeMasked string     `json:"authorizationCodeMasked"`
-	QPS                     int        `json:"qps"`
-	QPM                     int        `json:"qpm"`
-	AccessToken             string     `json:"accessToken"`
-	RefreshToken            string     `json:"refreshToken"`
-	AccessTokenExpiresAt    *time.Time `json:"accessTokenExpiresAt"`
-	RefreshTokenExpiresAt   *time.Time `json:"refreshTokenExpiresAt"`
-	TokenVersion            int64      `json:"tokenVersion"`
-	CreatedAt               time.Time  `json:"createdAt"`
-	UpdatedAt               time.Time  `json:"updatedAt"`
+	ID                         int64  `json:"id"`
+	ServiceName                string `json:"serviceName"`
+	ServiceURL                 string `json:"serviceUrl"`
+	AuthorizationCodeHash      string `json:"-"`
+	AuthorizationCodeMasked    string `json:"authorizationCodeMasked"`
+	QPS                        int    `json:"qps"`
+	QPM                        int    `json:"qpm"`
+	AccessToken                string `json:"accessToken"`
+	RefreshToken               string `json:"refreshToken"`
+	AccessTokenExpiresAt       int64  `json:"accessTokenExpiresAt"`
+	AccessTokenExpiresAtLocal  string `json:"accessTokenExpiresAtLocal"`
+	RefreshTokenExpiresAt      int64  `json:"refreshTokenExpiresAt"`
+	RefreshTokenExpiresAtLocal string `json:"refreshTokenExpiresAtLocal"`
+	TokenVersion               int64  `json:"tokenVersion"`
+	CreatedAt                  int64  `json:"createdAt"`
+	CreatedAtLocal             string `json:"createdAtLocal"`
+	UpdatedAt                  int64  `json:"updatedAt"`
+	UpdatedAtLocal             string `json:"updatedAtLocal"`
 }
 
 type CreateServiceInput struct {

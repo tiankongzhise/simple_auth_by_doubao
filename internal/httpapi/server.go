@@ -43,6 +43,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/admin/services", s.requireAdmin(s.handleAdminCreateService))
 	s.mux.HandleFunc("PUT /api/admin/services/{id}", s.requireAdmin(s.handleAdminUpdateService))
 	s.mux.HandleFunc("POST /api/admin/services/{id}/tokens/refresh", s.requireAdmin(s.handleAdminRefreshTokens))
+	s.mux.HandleFunc("POST /api/token/exchange", s.handleExchangeToken)
+	s.mux.HandleFunc("POST /api/token/refresh", s.handleRefreshToken)
+	s.mux.HandleFunc("POST /api/auth/verify", s.handleVerify)
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "UI is not implemented yet", http.StatusNotImplemented)
 	})
@@ -141,6 +144,59 @@ func (s *Server) handleAdminRefreshTokens(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, tokens)
+}
+
+func (s *Server) handleExchangeToken(w http.ResponseWriter, r *http.Request) {
+	var req service.ExchangeTokenInput
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.Origin = r.Header.Get("Origin")
+	req.Referer = r.Header.Get("Referer")
+	req.RemoteAddr = r.RemoteAddr
+	req.Model = r.Header.Get("model")
+
+	tokens, err := s.services.ExchangeToken(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, tokens)
+}
+
+func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req service.RefreshTokenInput
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.Origin = r.Header.Get("Origin")
+	req.Referer = r.Header.Get("Referer")
+	req.RemoteAddr = r.RemoteAddr
+	req.Model = r.Header.Get("model")
+
+	tokens, err := s.services.RefreshToken(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, tokens)
+}
+
+func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
+	req := service.VerifyInput{
+		ServiceName: r.Header.Get("Service-Name"),
+		AccessToken: r.Header.Get("Access-Token"),
+		Origin:      r.Header.Get("Origin"),
+		Referer:     r.Header.Get("Referer"),
+		RemoteAddr:  r.RemoteAddr,
+		Model:       r.Header.Get("model"),
+	}
+	result, err := s.services.Verify(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {

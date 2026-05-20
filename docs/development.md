@@ -87,11 +87,11 @@ CREATE TABLE IF NOT EXISTS services (
   qpm INTEGER NOT NULL DEFAULT 0,
   access_token TEXT NOT NULL DEFAULT '',
   refresh_token TEXT NOT NULL DEFAULT '',
-  access_token_expires_at TIMESTAMPTZ,
-  refresh_token_expires_at TIMESTAMPTZ,
+  access_token_expires_at BIGINT,
+  refresh_token_expires_at BIGINT,
   token_version BIGINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
 );
 ```
 
@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS services (
 - `service_url` 保存规范化 origin，唯一。
 - 永久授权码只保存 bcrypt hash 和 masked 值。
 - 当前 access/refresh JWT 明文保存。
+- 所有时间字段保存 Unix 秒级时间戳；接口响应同时返回时间戳和北京时间字符串。
 
 ## 5. Redis 设计
 

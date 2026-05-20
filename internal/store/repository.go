@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,11 +11,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"simple_auth_by_doubao/internal/config"
+	"simple_auth_by_doubao/internal/timefmt"
 )
 
 const serviceCacheTTL = 5 * time.Minute
@@ -80,11 +81,11 @@ CREATE TABLE IF NOT EXISTS services (
   qpm INTEGER NOT NULL DEFAULT 0,
   access_token TEXT NOT NULL DEFAULT '',
   refresh_token TEXT NOT NULL DEFAULT '',
-  access_token_expires_at TIMESTAMPTZ,
-  refresh_token_expires_at TIMESTAMPTZ,
+  access_token_expires_at BIGINT,
+  refresh_token_expires_at BIGINT,
   token_version BIGINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
 );`
 	if _, err := r.db.Exec(ctx, ddl); err != nil {
 		return fmt.Errorf("migrate postgres: %w", err)
@@ -192,7 +193,7 @@ SET service_name = $2,
   service_url = $3,
   qps = $4,
   qpm = $5,
-  updated_at = NOW()
+  updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
 RETURNING id, service_name, service_url, authorization_code_hash, authorization_code_masked,
   qps, qpm, access_token, refresh_token, access_token_expires_at, refresh_token_expires_at,
@@ -224,12 +225,12 @@ SET access_token = $2,
   access_token_expires_at = $4,
   refresh_token_expires_at = $5,
   token_version = token_version + 1,
-  updated_at = NOW()
+  updated_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
 RETURNING id, service_name, service_url, authorization_code_hash, authorization_code_masked,
   qps, qpm, access_token, refresh_token, access_token_expires_at, refresh_token_expires_at,
   token_version, created_at, updated_at`
-	svc, err := scanService(r.db.QueryRow(ctx, query, id, accessToken, refreshToken, accessExpiresAt, refreshExpiresAt))
+	svc, err := scanService(r.db.QueryRow(ctx, query, id, accessToken, refreshToken, timefmt.UnixSeconds(accessExpiresAt), timefmt.UnixSeconds(refreshExpiresAt)))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Service{}, ErrNotFound
@@ -299,8 +300,8 @@ type serviceScanner interface {
 
 func scanService(row serviceScanner) (Service, error) {
 	var svc Service
-	var accessExp pgtype.Timestamptz
-	var refreshExp pgtype.Timestamptz
+	var accessExp sql.NullInt64
+	var refreshExp sql.NullInt64
 	err := row.Scan(
 		&svc.ID,
 		&svc.ServiceName,
@@ -321,13 +322,15 @@ func scanService(row serviceScanner) (Service, error) {
 		return Service{}, err
 	}
 	if accessExp.Valid {
-		value := accessExp.Time
-		svc.AccessTokenExpiresAt = &value
+		svc.AccessTokenExpiresAt = accessExp.Int64
 	}
 	if refreshExp.Valid {
-		value := refreshExp.Time
-		svc.RefreshTokenExpiresAt = &value
+		svc.RefreshTokenExpiresAt = refreshExp.Int64
 	}
+	svc.AccessTokenExpiresAtLocal = timefmt.BeijingLocal(svc.AccessTokenExpiresAt)
+	svc.RefreshTokenExpiresAtLocal = timefmt.BeijingLocal(svc.RefreshTokenExpiresAt)
+	svc.CreatedAtLocal = timefmt.BeijingLocal(svc.CreatedAt)
+	svc.UpdatedAtLocal = timefmt.BeijingLocal(svc.UpdatedAt)
 	return svc, nil
 }
 

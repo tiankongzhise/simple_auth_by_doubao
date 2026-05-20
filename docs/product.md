@@ -112,10 +112,14 @@ Cookie: authSession=<jwt>
       "qpm": 300,
       "accessToken": "<jwt>",
       "refreshToken": "<jwt>",
-      "accessTokenExpiresAt": "2026-05-22T10:00:00Z",
-      "refreshTokenExpiresAt": "2026-06-20T10:00:00Z",
-      "createdAt": "2026-05-21T10:00:00Z",
-      "updatedAt": "2026-05-21T10:00:00Z"
+      "accessTokenExpiresAt": 1779415200,
+      "accessTokenExpiresAtLocal": "2026-05-22 18:00:00",
+      "refreshTokenExpiresAt": 1781920800,
+      "refreshTokenExpiresAtLocal": "2026-06-20 18:00:00",
+      "createdAt": 1779328800,
+      "createdAtLocal": "2026-05-21 18:00:00",
+      "updatedAt": 1779328800,
+      "updatedAtLocal": "2026-05-21 18:00:00"
     }
   ]
 }
@@ -200,8 +204,10 @@ Cookie: authSession=<jwt>
 {
   "accessToken": "<newAccessJwt>",
   "refreshToken": "<newRefreshJwt>",
-  "accessTokenExpiresAt": "2026-05-22T10:00:00Z",
-  "refreshTokenExpiresAt": "2026-06-20T10:00:00Z"
+  "accessTokenExpiresAt": 1779415200,
+  "accessTokenExpiresAtLocal": "2026-05-22 18:00:00",
+  "refreshTokenExpiresAt": 1781920800,
+  "refreshTokenExpiresAtLocal": "2026-06-20 18:00:00"
 }
 ```
 
@@ -232,8 +238,10 @@ Origin: https://billing.example.com
 {
   "accessToken": "<jwt>",
   "refreshToken": "<jwt>",
-  "accessTokenExpiresAt": "2026-05-22T10:00:00Z",
-  "refreshTokenExpiresAt": "2026-06-20T10:00:00Z"
+  "accessTokenExpiresAt": 1779415200,
+  "accessTokenExpiresAtLocal": "2026-05-22 18:00:00",
+  "refreshTokenExpiresAt": 1781920800,
+  "refreshTokenExpiresAtLocal": "2026-06-20 18:00:00"
 }
 ```
 
