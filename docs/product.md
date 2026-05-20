@@ -37,6 +37,7 @@
 - HTTP Header 使用短横线风格，例如 `Service-Name`、`Access-Token`。
 - JSON 请求体与响应体使用 camelCase，例如 `serviceName`、`authorizationCode`。
 - 特殊开发头按需求保留为 `model: dev`。
+- `serviceName` 支持中文。服务名放入请求头时建议先做 URL 百分号编码，例如浏览器使用 `encodeURIComponent(serviceName)`；服务端会先 URL 解码再保存或比对。
 
 ## 4. 管理 API
 
@@ -148,6 +149,7 @@ Content-Type: application/json
 字段规则：
 
 - `serviceName` 必填，不可与已有服务重复。
+- `serviceName` 支持中文；如果调用方对服务名做了 URL 百分号编码，服务端会自动解码。
 - `serviceUrl` 必填，保存为规范化 origin，不可与已有服务重复。
 - `authorizationCode` 可选；提供时必须为 32 位，未提供则系统随机生成 32 位。
 - `qps`、`qpm` 必填，必须大于等于 0。0 表示不限制该维度。

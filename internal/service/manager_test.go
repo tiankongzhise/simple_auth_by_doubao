@@ -16,3 +16,25 @@ func TestRemoteIPOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanServiceNameURLDecode(t *testing.T) {
+	got, err := cleanServiceName("%E8%AE%A2%E5%8D%95%E6%9C%8D%E5%8A%A1")
+	if err != nil {
+		t.Fatalf("cleanServiceName(encoded Chinese) error = %v", err)
+	}
+	if got != "订单服务" {
+		t.Fatalf("cleanServiceName(encoded Chinese) = %q, want 订单服务", got)
+	}
+
+	got, err = cleanServiceName("订单服务")
+	if err != nil {
+		t.Fatalf("cleanServiceName(raw Chinese) error = %v", err)
+	}
+	if got != "订单服务" {
+		t.Fatalf("cleanServiceName(raw Chinese) = %q, want 订单服务", got)
+	}
+
+	if _, err := cleanServiceName("%E8%AE%A2%E5%8D%ZZ"); err == nil {
+		t.Fatalf("cleanServiceName(invalid escape) error = nil, want error")
+	}
+}

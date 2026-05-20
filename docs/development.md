@@ -200,6 +200,8 @@ refresh token claims：
 
 所有 JSON 请求体限制大小为 1 MiB。
 
+`serviceName` 支持中文。所有进入业务层的服务名都先执行 URL 百分号解码再 trim、保存或比对；用于请求头 `Service-Name` 时，调用方建议传递 `encodeURIComponent(serviceName)` 的结果。
+
 ## 9. 测试策略
 
 单元测试：

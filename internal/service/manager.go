@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -337,6 +338,11 @@ func remoteIPOnly(remoteAddr string) string {
 
 func cleanServiceName(name string) (string, error) {
 	name = strings.TrimSpace(name)
+	decoded, err := url.PathUnescape(name)
+	if err != nil {
+		return "", fmt.Errorf("%w: serviceName url decode failed", ErrBadRequest)
+	}
+	name = strings.TrimSpace(decoded)
 	if name == "" {
 		return "", fmt.Errorf("%w: serviceName is required", ErrBadRequest)
 	}
