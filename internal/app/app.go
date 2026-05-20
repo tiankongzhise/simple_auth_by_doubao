@@ -10,6 +10,9 @@ import (
 
 	"simple_auth_by_doubao/internal/config"
 	"simple_auth_by_doubao/internal/httpapi"
+	"simple_auth_by_doubao/internal/service"
+	"simple_auth_by_doubao/internal/store"
+	"simple_auth_by_doubao/internal/token"
 )
 
 func Run(ctx context.Context) error {
@@ -17,10 +20,18 @@ func Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	repo, err := store.NewRepository(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer repo.Close()
+
+	tokenManager := token.NewManager(cfg.JWTSecret)
+	serviceManager := service.NewManager(cfg, repo, tokenManager)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.ServerPort,
-		Handler:           httpapi.NewServer(cfg),
+		Handler:           httpapi.NewServer(cfg, serviceManager, tokenManager),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
