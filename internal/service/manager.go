@@ -159,7 +159,7 @@ func (m *Manager) UpdateService(ctx context.Context, id int64, in UpdateServiceI
 }
 
 func (m *Manager) RefreshTokensForService(ctx context.Context, id int64) (TokenResponse, error) {
-	svc, err := m.repo.GetServiceByID(ctx, id)
+	svc, err := m.repo.GetServiceByIDFresh(ctx, id)
 	if err != nil {
 		return TokenResponse{}, mapStoreError(err)
 	}
@@ -174,7 +174,7 @@ func (m *Manager) ExchangeToken(ctx context.Context, in ExchangeTokenInput) (Tok
 	if err := ValidateAuthorizationCode(strings.TrimSpace(in.AuthorizationCode)); err != nil {
 		return TokenResponse{}, err
 	}
-	svc, err := m.repo.GetServiceByName(ctx, name)
+	svc, err := m.repo.GetServiceByNameFresh(ctx, name)
 	if err != nil {
 		return TokenResponse{}, mapStoreError(err)
 	}
@@ -195,7 +195,7 @@ func (m *Manager) RefreshToken(ctx context.Context, in RefreshTokenInput) (Token
 	if err != nil {
 		return TokenResponse{}, err
 	}
-	svc, err := m.repo.GetServiceByName(ctx, name)
+	svc, err := m.repo.GetServiceByNameFresh(ctx, name)
 	if err != nil {
 		return TokenResponse{}, mapStoreError(err)
 	}
@@ -220,7 +220,7 @@ func (m *Manager) Verify(ctx context.Context, in VerifyInput) (VerifyResponse, e
 	if err != nil {
 		return VerifyResponse{}, err
 	}
-	svc, err := m.repo.GetServiceByName(ctx, name)
+	svc, err := m.repo.GetServiceByNameFresh(ctx, name)
 	if err != nil {
 		return VerifyResponse{}, mapStoreError(err)
 	}

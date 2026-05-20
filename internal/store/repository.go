@@ -144,6 +144,10 @@ func (r *Repository) GetServiceByID(ctx context.Context, id int64) (Service, err
 	if svc, ok := r.getCachedService(ctx, r.keyServiceID(id)); ok {
 		return svc, nil
 	}
+	return r.GetServiceByIDFresh(ctx, id)
+}
+
+func (r *Repository) GetServiceByIDFresh(ctx context.Context, id int64) (Service, error) {
 	const query = `
 SELECT id, service_name, service_url, authorization_code_hash, authorization_code_masked,
   qps, qpm, access_token, refresh_token, access_token_expires_at, refresh_token_expires_at,
@@ -165,6 +169,10 @@ func (r *Repository) GetServiceByName(ctx context.Context, name string) (Service
 	if svc, ok := r.getCachedService(ctx, r.keyServiceName(name)); ok {
 		return svc, nil
 	}
+	return r.GetServiceByNameFresh(ctx, name)
+}
+
+func (r *Repository) GetServiceByNameFresh(ctx context.Context, name string) (Service, error) {
 	const query = `
 SELECT id, service_name, service_url, authorization_code_hash, authorization_code_masked,
   qps, qpm, access_token, refresh_token, access_token_expires_at, refresh_token_expires_at,
@@ -214,7 +222,7 @@ RETURNING id, service_name, service_url, authorization_code_hash, authorization_
 }
 
 func (r *Repository) SetTokens(ctx context.Context, id int64, accessToken string, refreshToken string, accessExpiresAt time.Time, refreshExpiresAt time.Time) (Service, error) {
-	oldSvc, err := r.GetServiceByID(ctx, id)
+	oldSvc, err := r.GetServiceByIDFresh(ctx, id)
 	if err != nil {
 		return Service{}, err
 	}
