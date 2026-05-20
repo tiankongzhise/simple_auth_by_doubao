@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +16,9 @@ import (
 	"simple_auth_by_doubao/internal/service"
 	"simple_auth_by_doubao/internal/token"
 )
+
+//go:embed web/*
+var webFiles embed.FS
 
 type Server struct {
 	cfg      *config.Config
@@ -46,9 +51,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/token/exchange", s.handleExchangeToken)
 	s.mux.HandleFunc("POST /api/token/refresh", s.handleRefreshToken)
 	s.mux.HandleFunc("POST /api/auth/verify", s.handleVerify)
-	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "UI is not implemented yet", http.StatusNotImplemented)
-	})
+	s.mountUI()
 }
 
 func (s *Server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +200,22 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) mountUI() {
+	sub, err := fs.Sub(webFiles, "web")
+	if err != nil {
+		panic(err)
+	}
+	static := http.FileServer(http.FS(sub))
+	s.mux.Handle("GET /static/", http.StripPrefix("/static/", static))
+	s.mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFileFS(w, r, sub, "index.html")
+	})
 }
 
 func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
