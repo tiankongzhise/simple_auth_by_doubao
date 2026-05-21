@@ -82,6 +82,7 @@ http://127.0.0.1:8080/
 5. 可以修改服务名称、服务网址、QPS、QPM。
 6. 点击“一键获取/刷新 Token”会成对刷新 access token 和 refresh token。
 7. admin 登录后可以删除服务；删除服务会移除其服务组成员关系。
+8. admin 登录后可以删除服务组；删除服务组会移除该组成员关系。
 
 ## 服务 API
 
@@ -191,7 +192,10 @@ GET /api/admin/service-groups
 POST /api/admin/service-groups
 PUT /api/admin/service-groups/{id}
 POST /api/admin/service-groups/{id}/tokens/refresh
+DELETE /api/admin/service-groups/{id}
 ```
+
+删除服务组需要 admin 登录后的会话 cookie，删除成功返回 `204 No Content`。删除服务组会移除该组成员关系，不会删除普通服务。
 
 创建服务组请求示例：
 

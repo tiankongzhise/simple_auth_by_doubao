@@ -147,6 +147,17 @@ RETURNING id, service_group_name, service_group_url, authorization_code_hash,
 	return r.GetServiceGroupByIDFresh(ctx, group.ID)
 }
 
+func (r *Repository) DeleteServiceGroup(ctx context.Context, id int64) error {
+	result, err := r.db.Exec(ctx, `DELETE FROM service_groups WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete service group: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *Repository) RefreshServiceGroupAccessToken(ctx context.Context, id int64, issue func(ServiceGroup) (string, time.Time, error)) (ServiceGroup, error) {
 	return r.refreshLockedServiceGroupAccessToken(ctx, "id", id, true, time.Time{}, 0, issue)
 }

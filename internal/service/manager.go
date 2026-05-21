@@ -249,6 +249,16 @@ func (m *Manager) UpdateServiceGroup(ctx context.Context, id int64, in UpdateSer
 	return group, nil
 }
 
+func (m *Manager) DeleteServiceGroup(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("%w: service group id is invalid", ErrBadRequest)
+	}
+	if err := m.repo.DeleteServiceGroup(ctx, id); err != nil {
+		return mapStoreError(err)
+	}
+	return nil
+}
+
 func (m *Manager) RefreshTokensForService(ctx context.Context, id int64) (TokenResponse, error) {
 	svc, err := m.repo.GetServiceByIDFresh(ctx, id)
 	if err != nil {

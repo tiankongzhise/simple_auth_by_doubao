@@ -245,6 +245,18 @@ function renderServiceGroups(groups) {
       }
     });
     node.querySelector("[data-copy-group-access]").addEventListener("click", () => copyText(node.querySelector("[data-group-access]").value));
+    node.querySelector("[data-delete-service-group]").addEventListener("click", async () => {
+      if (!confirm(`确定删除服务组「${group.serviceGroupName}」吗？删除后会同步移除该组成员关系。`)) {
+        return;
+      }
+      try {
+        await api(`/api/admin/service-groups/${group.id}`, { method: "DELETE" });
+        showToast("服务组已删除");
+        await loadServiceGroups();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
 
     serviceGroupList.appendChild(node);
   }

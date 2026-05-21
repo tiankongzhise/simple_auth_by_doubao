@@ -41,6 +41,7 @@ func TestHandleUsage(t *testing.T) {
 		{http.MethodPost, "/api/admin/service-groups"},
 		{http.MethodPut, "/api/admin/service-groups/{id}"},
 		{http.MethodPost, "/api/admin/service-groups/{id}/tokens/refresh"},
+		{http.MethodDelete, "/api/admin/service-groups/{id}"},
 	} {
 		if !hasEndpoint(usage.Endpoints, endpoint.method, endpoint.path) {
 			t.Fatalf("missing %s %s endpoint", endpoint.method, endpoint.path)

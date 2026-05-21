@@ -53,6 +53,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/admin/service-groups", s.requireAdmin(s.handleAdminListServiceGroups))
 	s.mux.HandleFunc("POST /api/admin/service-groups", s.requireAdmin(s.handleAdminCreateServiceGroup))
 	s.mux.HandleFunc("PUT /api/admin/service-groups/{id}", s.requireAdmin(s.handleAdminUpdateServiceGroup))
+	s.mux.HandleFunc("DELETE /api/admin/service-groups/{id}", s.requireAdmin(s.handleAdminDeleteServiceGroup))
 	s.mux.HandleFunc("POST /api/admin/service-groups/{id}/tokens/refresh", s.requireAdmin(s.handleAdminRefreshServiceGroupToken))
 	s.mux.HandleFunc("POST /api/token/exchange", s.handleExchangeToken)
 	s.mux.HandleFunc("POST /api/token/refresh", s.handleRefreshToken)
@@ -208,6 +209,18 @@ func (s *Server) handleAdminUpdateServiceGroup(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"serviceGroup": group})
+}
+
+func (s *Server) handleAdminDeleteServiceGroup(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.services.DeleteServiceGroup(r.Context(), id); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleAdminRefreshServiceGroupToken(w http.ResponseWriter, r *http.Request) {
