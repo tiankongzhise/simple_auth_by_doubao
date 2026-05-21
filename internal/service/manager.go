@@ -187,6 +187,16 @@ func (m *Manager) UpdateService(ctx context.Context, id int64, in UpdateServiceI
 	return svc, nil
 }
 
+func (m *Manager) DeleteService(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("%w: service id is invalid", ErrBadRequest)
+	}
+	if err := m.repo.DeleteService(ctx, id); err != nil {
+		return mapStoreError(err)
+	}
+	return nil
+}
+
 func (m *Manager) CreateServiceGroup(ctx context.Context, in CreateServiceGroupInput) (store.ServiceGroup, string, error) {
 	name, err := cleanServiceGroupName(in.ServiceGroupName)
 	if err != nil {

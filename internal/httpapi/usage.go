@@ -165,6 +165,14 @@ func buildUsage() apiUsage {
 				ResponseBody:  groupTokenResponse,
 			},
 			{
+				Method:        http.MethodDelete,
+				Path:          "/api/admin/services/{id}",
+				AuthRequired:  true,
+				Description:   "Delete a service. Its service group membership rows are removed automatically.",
+				SuccessStatus: http.StatusNoContent,
+				ResponseBody:  []usageField{},
+			},
+			{
 				Method:        http.MethodGet,
 				Path:          "/api/admin/service-groups",
 				AuthRequired:  true,

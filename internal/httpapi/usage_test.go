@@ -36,6 +36,7 @@ func TestHandleUsage(t *testing.T) {
 		method string
 		path   string
 	}{
+		{http.MethodDelete, "/api/admin/services/{id}"},
 		{http.MethodGet, "/api/admin/service-groups"},
 		{http.MethodPost, "/api/admin/service-groups"},
 		{http.MethodPut, "/api/admin/service-groups/{id}"},

@@ -81,6 +81,7 @@ http://127.0.0.1:8080/
 4. 服务列表展示 masked 永久授权码、当前生效 access token 和 refresh token。
 5. 可以修改服务名称、服务网址、QPS、QPM。
 6. 点击“一键获取/刷新 Token”会成对刷新 access token 和 refresh token。
+7. admin 登录后可以删除服务；删除服务会移除其服务组成员关系。
 
 ## 服务 API
 
@@ -124,6 +125,14 @@ Origin: https://billing.example.com
   "refreshToken": "<currentRefreshJwt>"
 }
 ```
+
+### 管理端删除服务
+
+```http
+DELETE /api/admin/services/{id}
+```
+
+该接口需要 admin 登录后的会话 cookie。删除成功返回 `204 No Content`，删除服务会移除其服务组成员关系。
 
 ### 鉴权校验
 

@@ -123,6 +123,16 @@ button.secondary:hover {
   background: #e2e8f0;
 }
 
+button.danger {
+  background: #fff1f0;
+  color: var(--danger);
+  border: 1px solid #f4b8b0;
+}
+
+button.danger:hover {
+  background: #fee4e2;
+}
+
 .form-card button {
   width: 100%;
   margin-top: 18px;

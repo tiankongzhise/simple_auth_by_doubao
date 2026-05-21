@@ -48,6 +48,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/admin/services", s.requireAdmin(s.handleAdminListServices))
 	s.mux.HandleFunc("POST /api/admin/services", s.requireAdmin(s.handleAdminCreateService))
 	s.mux.HandleFunc("PUT /api/admin/services/{id}", s.requireAdmin(s.handleAdminUpdateService))
+	s.mux.HandleFunc("DELETE /api/admin/services/{id}", s.requireAdmin(s.handleAdminDeleteService))
 	s.mux.HandleFunc("POST /api/admin/services/{id}/tokens/refresh", s.requireAdmin(s.handleAdminRefreshTokens))
 	s.mux.HandleFunc("GET /api/admin/service-groups", s.requireAdmin(s.handleAdminListServiceGroups))
 	s.mux.HandleFunc("POST /api/admin/service-groups", s.requireAdmin(s.handleAdminCreateServiceGroup))
@@ -140,6 +141,18 @@ func (s *Server) handleAdminUpdateService(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"service": svc})
+}
+
+func (s *Server) handleAdminDeleteService(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.services.DeleteService(r.Context(), id); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleAdminRefreshTokens(w http.ResponseWriter, r *http.Request) {

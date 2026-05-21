@@ -180,6 +180,19 @@ function renderServices(services) {
     });
     node.querySelector("[data-copy-access]").addEventListener("click", () => copyText(node.querySelector("[data-access]").value));
     node.querySelector("[data-copy-refresh]").addEventListener("click", () => copyText(node.querySelector("[data-refresh]").value));
+    node.querySelector("[data-delete-service]").addEventListener("click", async () => {
+      if (!confirm(`确定删除服务「${service.serviceName}」吗？删除后会同步移除它在服务组中的成员关系。`)) {
+        return;
+      }
+      try {
+        await api(`/api/admin/services/${service.id}`, { method: "DELETE" });
+        showToast("服务已删除");
+        await loadServices();
+        await loadServiceGroups();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
 
     serviceList.appendChild(node);
   }

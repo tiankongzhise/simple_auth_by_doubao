@@ -241,6 +241,22 @@ RETURNING id, service_name, service_url, authorization_code_hash, authorization_
 	return svc, nil
 }
 
+func (r *Repository) DeleteService(ctx context.Context, id int64) error {
+	oldSvc, err := r.GetServiceByIDFresh(ctx, id)
+	if err != nil {
+		return err
+	}
+	result, err := r.db.Exec(ctx, `DELETE FROM services WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete service: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	r.invalidateServiceBestEffort(ctx, oldSvc)
+	return nil
+}
+
 func (r *Repository) SetTokens(ctx context.Context, id int64, accessToken string, refreshToken string, accessExpiresAt time.Time, refreshExpiresAt time.Time) (Service, error) {
 	oldSvc, err := r.GetServiceByIDFresh(ctx, id)
 	if err != nil {
