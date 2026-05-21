@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>简单鉴权服务</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section id="loginView" class="login-panel">
+      <div class="brand">
+        <h1>简单鉴权服务</h1>
+        <p>服务注册、token 管理与鉴权校验</p>
+      </div>
+      <form id="loginForm" class="form-card">
+        <label>
+          <span>管理员账号</span>
+          <input name="username" autocomplete="username" required>
+        </label>
+        <label>
+          <span>管理员密码</span>
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">登录</button>
+        <p id="loginError" class="error"></p>
+      </form>
+    </section>
+
+    <section id="appView" class="app-view hidden">
+      <header class="topbar">
+        <div>
+          <h1>服务管理</h1>
+          <p>管理服务地址、限流与当前生效 token</p>
+        </div>
+        <button id="logoutBtn" class="secondary">退出</button>
+      </header>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>注册服务</h2>
+        </div>
+        <form id="createForm" class="service-form">
+          <label>
+            <span>服务名称</span>
+            <input name="serviceName" required>
+          </label>
+          <label>
+            <span>服务网址</span>
+            <input name="serviceUrl" type="url" placeholder="https://example.com" required>
+          </label>
+          <label>
+            <span>永久授权码</span>
+            <input name="authorizationCode" maxlength="32" placeholder="可选，32位">
+          </label>
+          <label>
+            <span>QPS</span>
+            <input name="qps" type="number" min="0" value="0" required>
+          </label>
+          <label>
+            <span>QPM</span>
+            <input name="qpm" type="number" min="0" value="0" required>
+          </label>
+          <button type="submit">注册</button>
+        </form>
+        <div id="oneTimeCode" class="one-time hidden">
+          <div>
+            <strong>永久授权码仅展示一次</strong>
+            <code></code>
+          </div>
+          <button type="button" class="secondary" data-copy-code>复制</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>已注册服务</h2>
+          <button id="reloadBtn" class="secondary">刷新列表</button>
+        </div>
+        <div id="serviceList" class="service-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>服务组管理</h2>
+        </div>
+        <form id="createGroupForm" class="group-form">
+          <label>
+            <span>服务组名称</span>
+            <input name="serviceGroupName" required>
+          </label>
+          <label>
+            <span>永久授权码</span>
+            <input name="authorizationCode" maxlength="32" placeholder="可选，32位">
+          </label>
+          <div class="member-field">
+            <span>管理的服务</span>
+            <div id="serviceGroupMembers" class="member-grid"></div>
+          </div>
+          <button type="submit">创建服务组</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>已有服务组</h2>
+          <button id="reloadGroupsBtn" class="secondary">刷新服务组</button>
+        </div>
+        <div id="serviceGroupList" class="service-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <template id="serviceTemplate">
+    <article class="service-item">
+      <form class="edit-form">
+        <input type="hidden" name="id">
+        <div class="item-grid">
+          <label>
+            <span>服务名称</span>
+            <input name="serviceName" required>
+          </label>
+          <label>
+            <span>服务网址</span>
+            <input name="serviceUrl" type="url" required>
+          </label>
+          <label>
+            <span>QPS</span>
+            <input name="qps" type="number" min="0" required>
+          </label>
+          <label>
+            <span>QPM</span>
+            <input name="qpm" type="number" min="0" required>
+          </label>
+        </div>
+        <div class="meta-row">
+          <span>永久授权码</span>
+          <code data-code-masked></code>
+        </div>
+        <div class="token-box">
+          <div>
+            <span>Access Token</span>
+            <textarea data-access readonly></textarea>
+            <small data-access-exp></small>
+          </div>
+          <div>
+            <span>Refresh Token</span>
+            <textarea data-refresh readonly></textarea>
+            <small data-refresh-exp></small>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">保存修改</button>
+          <button type="button" class="secondary" data-refresh-token>一键获取/刷新 Token</button>
+          <button type="button" class="secondary" data-copy-access>复制 Access</button>
+          <button type="button" class="secondary" data-copy-refresh>复制 Refresh</button>
+          <button type="button" class="danger" data-delete-service>删除服务</button>
+        </div>
+      </form>
+    </article>
+  </template>
+
+  <template id="serviceGroupTemplate">
+    <article class="service-item">
+      <form class="group-edit-form">
+        <input type="hidden" name="id">
+        <div class="group-item-grid">
+          <label>
+            <span>服务组名称</span>
+            <input name="serviceGroupName" required>
+          </label>
+          <label>
+            <span>服务组地址</span>
+            <input name="serviceGroupUrl" readonly>
+          </label>
+        </div>
+        <div class="meta-row">
+          <span>永久授权码</span>
+          <code data-group-code-masked></code>
+        </div>
+        <div class="member-field">
+          <span>管理的服务</span>
+          <div class="member-grid" data-group-members></div>
+        </div>
+        <div class="token-box single-token">
+          <div>
+            <span>Access Token</span>
+            <textarea data-group-access readonly></textarea>
+            <small data-group-access-exp></small>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">保存服务组</button>
+          <button type="button" class="secondary" data-refresh-group-token>获取/刷新组密钥</button>
+          <button type="button" class="secondary" data-copy-group-access>复制 Access</button>
+          <button type="button" class="danger" data-delete-service-group>删除服务组</button>
+        </div>
+      </form>
+    </article>
+  </template>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

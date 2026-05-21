@@ -1,0 +1,291 @@
+package httpapi
+
+import "net/http"
+
+type apiUsage struct {
+	ServiceName string          `json:"serviceName"`
+	Version     string          `json:"version"`
+	Description string          `json:"description"`
+	Conventions usageConvention `json:"conventions"`
+	Endpoints   []usageEndpoint `json:"endpoints"`
+	ErrorCodes  []usageError    `json:"errorCodes"`
+	Notes       []string        `json:"notes"`
+}
+
+type usageConvention struct {
+	ContentType       string   `json:"contentType"`
+	HeaderNaming      string   `json:"headerNaming"`
+	JSONNaming        string   `json:"jsonNaming"`
+	TimeFormat        string   `json:"timeFormat"`
+	ServiceNameRules  []string `json:"serviceNameRules"`
+	ServiceGroupRules []string `json:"serviceGroupRules"`
+}
+
+type usageEndpoint struct {
+	Method        string         `json:"method"`
+	Path          string         `json:"path"`
+	AuthRequired  bool           `json:"authRequired"`
+	Description   string         `json:"description"`
+	Headers       []usageField   `json:"headers,omitempty"`
+	RequestBody   []usageField   `json:"requestBody,omitempty"`
+	SuccessStatus int            `json:"successStatus"`
+	ResponseBody  []usageField   `json:"responseBody"`
+	Example       map[string]any `json:"example,omitempty"`
+}
+
+type usageField struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+}
+
+type usageError struct {
+	Status      int    `json:"status"`
+	Description string `json:"description"`
+}
+
+func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, buildUsage())
+}
+
+func buildUsage() apiUsage {
+	tokenResponse := []usageField{
+		{Name: "accessToken", Type: "string", Required: true, Description: "Current access JWT."},
+		{Name: "refreshToken", Type: "string", Required: true, Description: "Current refresh JWT."},
+		{Name: "accessTokenExpiresAt", Type: "number", Required: true, Description: "Access token expiration as Unix seconds."},
+		{Name: "accessTokenExpiresAtLocal", Type: "string", Required: true, Description: "Access token expiration in Beijing local time."},
+		{Name: "refreshTokenExpiresAt", Type: "number", Required: true, Description: "Refresh token expiration as Unix seconds."},
+		{Name: "refreshTokenExpiresAtLocal", Type: "string", Required: true, Description: "Refresh token expiration in Beijing local time."},
+	}
+	groupTokenResponse := []usageField{
+		{Name: "accessToken", Type: "string", Required: true, Description: "Current service group access JWT."},
+		{Name: "accessTokenExpiresAt", Type: "number", Required: true, Description: "Access token expiration as Unix seconds."},
+		{Name: "accessTokenExpiresAtLocal", Type: "string", Required: true, Description: "Access token expiration in Beijing local time."},
+	}
+	serviceGroupFields := []usageField{
+		{Name: "id", Type: "number", Required: true, Description: "Service group id."},
+		{Name: "serviceGroupName", Type: "string", Required: true, Description: "Unique service group name."},
+		{Name: "serviceGroupUrl", Type: "string", Required: true, Description: "Read-only generated URL, formatted as service-group://{id}."},
+		{Name: "authorizationCodeMasked", Type: "string", Required: true, Description: "Masked permanent authorization code."},
+		{Name: "accessToken", Type: "string", Required: true, Description: "Current service group access JWT, empty before first refresh."},
+		{Name: "accessTokenExpiresAt", Type: "number", Required: true, Description: "Access token expiration as Unix seconds, zero before first refresh."},
+		{Name: "accessTokenExpiresAtLocal", Type: "string", Required: true, Description: "Access token expiration in Beijing local time."},
+		{Name: "serviceIds", Type: "array<number>", Required: true, Description: "IDs of services managed by this group."},
+		{Name: "services", Type: "array<object>", Required: true, Description: "Service records managed by this group."},
+		{Name: "createdAt", Type: "number", Required: true, Description: "Creation time as Unix seconds."},
+		{Name: "updatedAt", Type: "number", Required: true, Description: "Last update time as Unix seconds."},
+	}
+
+	return apiUsage{
+		ServiceName: "simple_auth_by_doubao",
+		Version:     "1.1",
+		Description: "Centralized service and service group token management with request verification.",
+		Conventions: usageConvention{
+			ContentType:  "JSON APIs use application/json.",
+			HeaderNaming: "Use hyphenated HTTP headers, for example Service-Name, Target-Service-Name, and Access-Token.",
+			JSONNaming:   "JSON request and response fields use camelCase.",
+			TimeFormat:   "Timestamps are returned as Unix seconds plus Beijing local formatted strings.",
+			ServiceNameRules: []string{
+				"serviceName supports UTF-8 names.",
+				"Service-Name may be URL percent encoded when sent as a request header.",
+				"Normal service verification still validates Origin or Referer against serviceUrl.",
+			},
+			ServiceGroupRules: []string{
+				"serviceGroupName supports the same name rules as serviceName.",
+				"Service group URLs are generated by the server as service-group://{id} and are read-only.",
+				"Service group verification uses Service-Name for the group and Target-Service-Name for the target service.",
+				"Service group verification skips Origin and Referer checks, but applies the target service QPS/QPM limit.",
+			},
+		},
+		Endpoints: []usageEndpoint{
+			{
+				Method:        http.MethodGet,
+				Path:          "/api/public/usage",
+				AuthRequired:  false,
+				Description:   "Returns this public API usage document.",
+				SuccessStatus: http.StatusOK,
+				ResponseBody: []usageField{
+					{Name: "serviceName", Type: "string", Required: true, Description: "API service name."},
+					{Name: "version", Type: "string", Required: true, Description: "API version."},
+					{Name: "conventions", Type: "object", Required: true, Description: "Naming and encoding conventions."},
+					{Name: "endpoints", Type: "array", Required: true, Description: "Endpoint descriptions."},
+					{Name: "errorCodes", Type: "array", Required: true, Description: "HTTP error codes."},
+				},
+			},
+			{
+				Method:       http.MethodPost,
+				Path:         "/api/token/exchange",
+				AuthRequired: false,
+				Description:  "Exchange a service permanent authorization code for an access/refresh token pair.",
+				Headers: []usageField{
+					{Name: "Content-Type", Type: "string", Required: true, Description: "application/json"},
+					{Name: "Origin", Type: "string", Required: false, Description: "Registered service origin; Origin or Referer is required unless dev bypass is enabled."},
+					{Name: "Referer", Type: "string", Required: false, Description: "Fallback source header when Origin is absent."},
+					{Name: "model", Type: "string", Required: false, Description: "Use dev only with configured local dev IPs."},
+				},
+				RequestBody: []usageField{
+					{Name: "serviceName", Type: "string", Required: true, Description: "Registered service name."},
+					{Name: "authorizationCode", Type: "string", Required: true, Description: "32-character permanent authorization code."},
+				},
+				SuccessStatus: http.StatusOK,
+				ResponseBody:  tokenResponse,
+			},
+			{
+				Method:       http.MethodPost,
+				Path:         "/api/token/refresh",
+				AuthRequired: false,
+				Description:  "Refresh the current service access/refresh token pair. Old tokens become invalid immediately.",
+				Headers: []usageField{
+					{Name: "Content-Type", Type: "string", Required: true, Description: "application/json"},
+					{Name: "Origin", Type: "string", Required: false, Description: "Registered service origin; Origin or Referer is required unless dev bypass is enabled."},
+					{Name: "Referer", Type: "string", Required: false, Description: "Fallback source header when Origin is absent."},
+					{Name: "model", Type: "string", Required: false, Description: "Use dev only with configured local dev IPs."},
+				},
+				RequestBody: []usageField{
+					{Name: "serviceName", Type: "string", Required: true, Description: "Registered service name."},
+					{Name: "refreshToken", Type: "string", Required: true, Description: "Current refresh JWT."},
+				},
+				SuccessStatus: http.StatusOK,
+				ResponseBody:  tokenResponse,
+			},
+			{
+				Method:       http.MethodPost,
+				Path:         "/api/service-groups/token/latest",
+				AuthRequired: false,
+				Description:  "Get the latest service group access token using its permanent authorization code. The server refreshes only when the current access token has one hour or less remaining, with row locking to avoid duplicate concurrent refreshes.",
+				Headers: []usageField{
+					{Name: "Content-Type", Type: "string", Required: true, Description: "application/json"},
+				},
+				RequestBody: []usageField{
+					{Name: "serviceGroupName", Type: "string", Required: true, Description: "Registered service group name."},
+					{Name: "authorizationCode", Type: "string", Required: true, Description: "32-character permanent authorization code."},
+				},
+				SuccessStatus: http.StatusOK,
+				ResponseBody:  groupTokenResponse,
+			},
+			{
+				Method:        http.MethodDelete,
+				Path:          "/api/admin/services/{id}",
+				AuthRequired:  true,
+				Description:   "Delete a service. Its service group membership rows are removed automatically.",
+				SuccessStatus: http.StatusNoContent,
+				ResponseBody:  []usageField{},
+			},
+			{
+				Method:        http.MethodGet,
+				Path:          "/api/admin/service-groups",
+				AuthRequired:  true,
+				Description:   "List service groups with their generated URLs, current access tokens, and managed services.",
+				SuccessStatus: http.StatusOK,
+				ResponseBody: []usageField{
+					{Name: "serviceGroups", Type: "array<object>", Required: true, Description: "Service group list."},
+				},
+				Example: map[string]any{
+					"serviceGroupFields": serviceGroupFields,
+				},
+			},
+			{
+				Method:       http.MethodPost,
+				Path:         "/api/admin/service-groups",
+				AuthRequired: true,
+				Description:  "Create a service group. The serviceGroupUrl is generated by the server and cannot be provided by clients.",
+				Headers: []usageField{
+					{Name: "Content-Type", Type: "string", Required: true, Description: "application/json"},
+				},
+				RequestBody: []usageField{
+					{Name: "serviceGroupName", Type: "string", Required: true, Description: "Unique service group name."},
+					{Name: "authorizationCode", Type: "string", Required: false, Description: "Optional 32-character permanent authorization code. If empty, the server generates one."},
+					{Name: "serviceIds", Type: "array<number>", Required: true, Description: "Positive service IDs managed by the group. Duplicates are ignored."},
+				},
+				SuccessStatus: http.StatusCreated,
+				ResponseBody: []usageField{
+					{Name: "serviceGroup", Type: "object", Required: true, Description: "Created service group."},
+					{Name: "authorizationCode", Type: "string", Required: true, Description: "One-time visible permanent authorization code."},
+				},
+				Example: map[string]any{
+					"requestBody": map[string]any{
+						"serviceGroupName":  "core-group",
+						"authorizationCode": "",
+						"serviceIds":        []int{1, 2},
+					},
+					"serviceGroupFields": serviceGroupFields,
+				},
+			},
+			{
+				Method:       http.MethodPut,
+				Path:         "/api/admin/service-groups/{id}",
+				AuthRequired: true,
+				Description:  "Update a service group name and replace its managed service list. serviceGroupUrl and authorization code are not editable.",
+				Headers: []usageField{
+					{Name: "Content-Type", Type: "string", Required: true, Description: "application/json"},
+				},
+				RequestBody: []usageField{
+					{Name: "serviceGroupName", Type: "string", Required: true, Description: "Unique service group name."},
+					{Name: "serviceIds", Type: "array<number>", Required: true, Description: "Positive service IDs managed by the group. Duplicates are ignored."},
+				},
+				SuccessStatus: http.StatusOK,
+				ResponseBody: []usageField{
+					{Name: "serviceGroup", Type: "object", Required: true, Description: "Updated service group."},
+				},
+				Example: map[string]any{
+					"requestBody": map[string]any{
+						"serviceGroupName": "core-group",
+						"serviceIds":       []int{1, 2, 3},
+					},
+					"serviceGroupFields": serviceGroupFields,
+				},
+			},
+			{
+				Method:        http.MethodPost,
+				Path:          "/api/admin/service-groups/{id}/tokens/refresh",
+				AuthRequired:  true,
+				Description:   "Force refresh a service group access token for internal/admin use. This endpoint never returns a refresh token.",
+				SuccessStatus: http.StatusOK,
+				ResponseBody:  groupTokenResponse,
+			},
+			{
+				Method:        http.MethodDelete,
+				Path:          "/api/admin/service-groups/{id}",
+				AuthRequired:  true,
+				Description:   "Delete a service group. Its service group membership rows are removed automatically.",
+				SuccessStatus: http.StatusNoContent,
+				ResponseBody:  []usageField{},
+			},
+			{
+				Method:       http.MethodPost,
+				Path:         "/api/auth/verify",
+				AuthRequired: false,
+				Description:  "Verify a service token, or verify a service group token for a target service.",
+				Headers: []usageField{
+					{Name: "Service-Name", Type: "string", Required: true, Description: "Service name for normal verification, or service group name when Target-Service-Name is present."},
+					{Name: "Target-Service-Name", Type: "string", Required: false, Description: "Target service name for service group verification."},
+					{Name: "Access-Token", Type: "string", Required: true, Description: "Current access JWT."},
+					{Name: "Origin", Type: "string", Required: false, Description: "Required for normal service verification unless dev bypass is enabled; ignored for service group verification."},
+					{Name: "Referer", Type: "string", Required: false, Description: "Fallback source header for normal service verification."},
+					{Name: "model", Type: "string", Required: false, Description: "Use dev only with configured local dev IPs."},
+				},
+				SuccessStatus: http.StatusOK,
+				ResponseBody: []usageField{
+					{Name: "ok", Type: "boolean", Required: true, Description: "Whether verification succeeded."},
+					{Name: "serviceName", Type: "string", Required: true, Description: "Verified target service name."},
+					{Name: "serviceGroupName", Type: "string", Required: false, Description: "Verified service group name when group verification is used."},
+				},
+			},
+		},
+		ErrorCodes: []usageError{
+			{Status: http.StatusBadRequest, Description: "Invalid JSON or request fields."},
+			{Status: http.StatusUnauthorized, Description: "Invalid credentials or token."},
+			{Status: http.StatusForbidden, Description: "Origin mismatch or service group does not manage the target service."},
+			{Status: http.StatusNotFound, Description: "Service or service group was not found."},
+			{Status: http.StatusConflict, Description: "Duplicate service, service URL, or service group name."},
+			{Status: http.StatusTooManyRequests, Description: "QPS or QPM limit exceeded."},
+			{Status: http.StatusInternalServerError, Description: "Unexpected server error."},
+		},
+		Notes: []string{
+			"PostgreSQL is the source of truth for current tokens; Redis is only used for service cache and rate limiting.",
+			"Service group token latest lookup never returns a refresh token.",
+			"model: dev only skips normal service Origin/Referer checks; it does not skip token or rate limit checks.",
+		},
+	}
+}
