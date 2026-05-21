@@ -49,8 +49,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/admin/services", s.requireAdmin(s.handleAdminCreateService))
 	s.mux.HandleFunc("PUT /api/admin/services/{id}", s.requireAdmin(s.handleAdminUpdateService))
 	s.mux.HandleFunc("POST /api/admin/services/{id}/tokens/refresh", s.requireAdmin(s.handleAdminRefreshTokens))
+	s.mux.HandleFunc("GET /api/admin/service-groups", s.requireAdmin(s.handleAdminListServiceGroups))
+	s.mux.HandleFunc("POST /api/admin/service-groups", s.requireAdmin(s.handleAdminCreateServiceGroup))
+	s.mux.HandleFunc("PUT /api/admin/service-groups/{id}", s.requireAdmin(s.handleAdminUpdateServiceGroup))
+	s.mux.HandleFunc("POST /api/admin/service-groups/{id}/tokens/refresh", s.requireAdmin(s.handleAdminRefreshServiceGroupToken))
 	s.mux.HandleFunc("POST /api/token/exchange", s.handleExchangeToken)
 	s.mux.HandleFunc("POST /api/token/refresh", s.handleRefreshToken)
+	s.mux.HandleFunc("POST /api/service-groups/token/latest", s.handleLatestServiceGroupToken)
 	s.mux.HandleFunc("POST /api/auth/verify", s.handleVerify)
 	s.mountUI()
 }
@@ -150,6 +155,61 @@ func (s *Server) handleAdminRefreshTokens(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, tokens)
 }
 
+func (s *Server) handleAdminListServiceGroups(w http.ResponseWriter, r *http.Request) {
+	groups, err := s.services.ListServiceGroups(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list service groups failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"serviceGroups": groups})
+}
+
+func (s *Server) handleAdminCreateServiceGroup(w http.ResponseWriter, r *http.Request) {
+	var req service.CreateServiceGroupInput
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	group, code, err := s.services.CreateServiceGroup(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"serviceGroup":      group,
+		"authorizationCode": code,
+	})
+}
+
+func (s *Server) handleAdminUpdateServiceGroup(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathID(w, r)
+	if !ok {
+		return
+	}
+	var req service.UpdateServiceGroupInput
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	group, err := s.services.UpdateServiceGroup(r.Context(), id, req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"serviceGroup": group})
+}
+
+func (s *Server) handleAdminRefreshServiceGroupToken(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathID(w, r)
+	if !ok {
+		return
+	}
+	tokens, err := s.services.RefreshTokenForServiceGroup(r.Context(), id)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, tokens)
+}
+
 func (s *Server) handleExchangeToken(w http.ResponseWriter, r *http.Request) {
 	var req service.ExchangeTokenInput
 	if !decodeJSON(w, r, &req) {
@@ -186,14 +246,28 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, tokens)
 }
 
+func (s *Server) handleLatestServiceGroupToken(w http.ResponseWriter, r *http.Request) {
+	var req service.LatestServiceGroupTokenInput
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	tokens, err := s.services.LatestServiceGroupToken(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, tokens)
+}
+
 func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 	req := service.VerifyInput{
-		ServiceName: r.Header.Get("Service-Name"),
-		AccessToken: r.Header.Get("Access-Token"),
-		Origin:      r.Header.Get("Origin"),
-		Referer:     r.Header.Get("Referer"),
-		RemoteAddr:  r.RemoteAddr,
-		Model:       r.Header.Get("model"),
+		ServiceName:       r.Header.Get("Service-Name"),
+		TargetServiceName: r.Header.Get("Target-Service-Name"),
+		AccessToken:       r.Header.Get("Access-Token"),
+		Origin:            r.Header.Get("Origin"),
+		Referer:           r.Header.Get("Referer"),
+		RemoteAddr:        r.RemoteAddr,
+		Model:             r.Header.Get("model"),
 	}
 	result, err := s.services.Verify(r.Context(), req)
 	if err != nil {

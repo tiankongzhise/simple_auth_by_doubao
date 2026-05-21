@@ -3,10 +3,16 @@ const appView = document.querySelector("#appView");
 const loginForm = document.querySelector("#loginForm");
 const loginError = document.querySelector("#loginError");
 const createForm = document.querySelector("#createForm");
+const createGroupForm = document.querySelector("#createGroupForm");
 const serviceList = document.querySelector("#serviceList");
+const serviceGroupList = document.querySelector("#serviceGroupList");
+const serviceGroupMembers = document.querySelector("#serviceGroupMembers");
 const oneTimeCode = document.querySelector("#oneTimeCode");
 const toast = document.querySelector("#toast");
 const template = document.querySelector("#serviceTemplate");
+const groupTemplate = document.querySelector("#serviceGroupTemplate");
+
+let servicesCache = [];
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -34,6 +40,7 @@ document.querySelector("#logoutBtn").addEventListener("click", async () => {
 });
 
 document.querySelector("#reloadBtn").addEventListener("click", loadServices);
+document.querySelector("#reloadGroupsBtn").addEventListener("click", loadServiceGroups);
 
 createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -60,6 +67,28 @@ createForm.addEventListener("submit", async (event) => {
   }
 });
 
+createGroupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(createGroupForm);
+  try {
+    const result = await api("/api/admin/service-groups", {
+      method: "POST",
+      body: {
+        serviceGroupName: form.get("serviceGroupName"),
+        authorizationCode: form.get("authorizationCode") || "",
+        serviceIds: checkedServiceIds(serviceGroupMembers),
+      },
+    });
+    createGroupForm.reset();
+    renderMemberCheckboxes(serviceGroupMembers, servicesCache, []);
+    showOneTimeCode(result.authorizationCode);
+    showToast("服务组创建成功");
+    await loadServiceGroups();
+  } catch (error) {
+    showToast(error.message);
+  }
+});
+
 oneTimeCode.querySelector("[data-copy-code]").addEventListener("click", () => {
   copyText(oneTimeCode.querySelector("code").textContent);
 });
@@ -68,12 +97,29 @@ async function showApp() {
   loginView.classList.add("hidden");
   appView.classList.remove("hidden");
   await loadServices();
+  await loadServiceGroups();
 }
 
 async function loadServices() {
   try {
     const result = await api("/api/admin/services");
-    renderServices(result.services || []);
+    servicesCache = result.services || [];
+    renderServices(servicesCache);
+    renderMemberCheckboxes(serviceGroupMembers, servicesCache, checkedServiceIds(serviceGroupMembers));
+  } catch (error) {
+    if (error.status === 401) {
+      appView.classList.add("hidden");
+      loginView.classList.remove("hidden");
+      return;
+    }
+    showToast(error.message);
+  }
+}
+
+async function loadServiceGroups() {
+  try {
+    const result = await api("/api/admin/service-groups");
+    renderServiceGroups(result.serviceGroups || []);
   } catch (error) {
     if (error.status === 401) {
       appView.classList.add("hidden");
@@ -139,11 +185,95 @@ function renderServices(services) {
   }
 }
 
+function renderServiceGroups(groups) {
+  serviceGroupList.textContent = "";
+  if (groups.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "暂无服务组";
+    serviceGroupList.appendChild(empty);
+    return;
+  }
+  for (const group of groups) {
+    const node = groupTemplate.content.firstElementChild.cloneNode(true);
+    const form = node.querySelector(".group-edit-form");
+    const members = node.querySelector("[data-group-members]");
+    form.id.value = group.id;
+    form.serviceGroupName.value = group.serviceGroupName;
+    form.serviceGroupUrl.value = group.serviceGroupUrl;
+    node.querySelector("[data-group-code-masked]").textContent = group.authorizationCodeMasked;
+    renderMemberCheckboxes(members, servicesCache, group.serviceIds || []);
+    updateGroupTokenView(node, group);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await api(`/api/admin/service-groups/${group.id}`, {
+          method: "PUT",
+          body: {
+            serviceGroupName: form.serviceGroupName.value,
+            serviceIds: checkedServiceIds(members),
+          },
+        });
+        showToast("服务组已保存");
+        await loadServiceGroups();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    node.querySelector("[data-refresh-group-token]").addEventListener("click", async () => {
+      try {
+        const tokens = await api(`/api/admin/service-groups/${group.id}/tokens/refresh`, { method: "POST" });
+        updateGroupTokenView(node, tokens);
+        showToast("服务组密钥已刷新");
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+    node.querySelector("[data-copy-group-access]").addEventListener("click", () => copyText(node.querySelector("[data-group-access]").value));
+
+    serviceGroupList.appendChild(node);
+  }
+}
+
 function updateTokenView(node, data) {
   node.querySelector("[data-access]").value = data.accessToken || "";
   node.querySelector("[data-refresh]").value = data.refreshToken || "";
   node.querySelector("[data-access-exp]").textContent = expiresText("Access", data.accessTokenExpiresAt, data.accessTokenExpiresAtLocal);
   node.querySelector("[data-refresh-exp]").textContent = expiresText("Refresh", data.refreshTokenExpiresAt, data.refreshTokenExpiresAtLocal);
+}
+
+function updateGroupTokenView(node, data) {
+  node.querySelector("[data-group-access]").value = data.accessToken || "";
+  node.querySelector("[data-group-access-exp]").textContent = expiresText("Access", data.accessTokenExpiresAt, data.accessTokenExpiresAtLocal);
+}
+
+function renderMemberCheckboxes(container, services, selectedIDs) {
+  const selected = new Set((selectedIDs || []).map(String));
+  container.textContent = "";
+  if (services.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "member-empty";
+    empty.textContent = "暂无可选服务";
+    container.appendChild(empty);
+    return;
+  }
+  for (const service of services) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    const text = document.createElement("span");
+    input.type = "checkbox";
+    input.value = service.id;
+    input.checked = selected.has(String(service.id));
+    text.textContent = service.serviceName;
+    label.append(input, text);
+    container.appendChild(label);
+  }
+}
+
+function checkedServiceIds(container) {
+  return [...container.querySelectorAll("input[type='checkbox']:checked")].map((input) => Number(input.value));
 }
 
 function expiresText(label, ts, local) {

@@ -86,6 +86,26 @@ CREATE TABLE IF NOT EXISTS services (
   token_version BIGINT NOT NULL DEFAULT 0,
   created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
   updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS service_groups (
+  id BIGSERIAL PRIMARY KEY,
+  service_group_name TEXT NOT NULL UNIQUE,
+  service_group_url TEXT NOT NULL UNIQUE,
+  authorization_code_hash TEXT NOT NULL,
+  authorization_code_masked TEXT NOT NULL,
+  access_token TEXT NOT NULL DEFAULT '',
+  access_token_expires_at BIGINT,
+  token_version BIGINT NOT NULL DEFAULT 0,
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS service_group_members (
+  service_group_id BIGINT NOT NULL REFERENCES service_groups(id) ON DELETE CASCADE,
+  service_id BIGINT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  PRIMARY KEY (service_group_id, service_id)
 );`
 	if _, err := r.db.Exec(ctx, ddl); err != nil {
 		return fmt.Errorf("migrate postgres: %w", err)
@@ -345,4 +365,9 @@ func scanService(row serviceScanner) (Service, error) {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }

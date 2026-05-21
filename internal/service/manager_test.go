@@ -38,3 +38,31 @@ func TestCleanServiceNameURLDecode(t *testing.T) {
 		t.Fatalf("cleanServiceName(invalid escape) error = nil, want error")
 	}
 }
+
+func TestCleanServiceGroupNameURLDecode(t *testing.T) {
+	got, err := cleanServiceGroupName("core%20group")
+	if err != nil {
+		t.Fatalf("cleanServiceGroupName(encoded) error = %v", err)
+	}
+	if got != "core group" {
+		t.Fatalf("cleanServiceGroupName(encoded) = %q, want core group", got)
+	}
+	if _, err := cleanServiceGroupName("   "); err == nil {
+		t.Fatalf("cleanServiceGroupName(blank) error = nil, want error")
+	}
+	if _, err := cleanServiceGroupName("%E8%AE%A2%E5%8D%ZZ"); err == nil {
+		t.Fatalf("cleanServiceGroupName(invalid escape) error = nil, want error")
+	}
+}
+
+func TestValidateServiceIDs(t *testing.T) {
+	if err := validateServiceIDs([]int64{1, 2, 2}); err != nil {
+		t.Fatalf("validateServiceIDs(valid) error = %v", err)
+	}
+	if err := validateServiceIDs([]int64{1, 0}); err == nil {
+		t.Fatalf("validateServiceIDs(zero) error = nil, want error")
+	}
+	if err := validateServiceIDs([]int64{-1}); err == nil {
+		t.Fatalf("validateServiceIDs(negative) error = nil, want error")
+	}
+}

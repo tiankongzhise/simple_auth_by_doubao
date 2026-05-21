@@ -161,11 +161,17 @@ button.secondary:hover {
 }
 
 .service-form,
-.item-grid {
+.item-grid,
+.group-form,
+.group-item-grid {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1.2fr 120px 120px auto;
   gap: 12px;
   align-items: end;
+}
+
+.group-form {
+  grid-template-columns: 1fr 1fr 2fr auto;
 }
 
 .service-list {
@@ -180,6 +186,10 @@ button.secondary:hover {
 
 .service-item .item-grid {
   grid-template-columns: 1fr 1.4fr 120px 120px;
+}
+
+.service-item .group-item-grid {
+  grid-template-columns: 1fr 1.4fr;
 }
 
 .meta-row {
@@ -204,6 +214,10 @@ code {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.token-box.single-token {
+  grid-template-columns: 1fr;
 }
 
 .token-box span {
@@ -245,6 +259,44 @@ code {
   color: var(--ok);
 }
 
+.member-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.member-grid {
+  min-height: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.member-grid label {
+  display: inline-flex;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  color: var(--text);
+}
+
+.member-grid input {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+.member-empty {
+  color: var(--muted);
+}
+
 .toast {
   position: fixed;
   right: 24px;
@@ -260,6 +312,8 @@ code {
 @media (max-width: 900px) {
   .login-panel,
   .service-form,
+  .group-form,
+  .service-item .group-item-grid,
   .service-item .item-grid,
   .token-box {
     grid-template-columns: 1fr;

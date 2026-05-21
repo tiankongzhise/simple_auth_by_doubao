@@ -170,3 +170,53 @@ Origin: https://billing.example.com
 $env:GOCACHE = Join-Path (Get-Location) ".gocache"
 go test ./...
 ```
+
+## 服务组
+
+服务组用于把多个服务聚合成一个鉴权主体。服务组注册后会自动生成只读地址，格式为 `service-group://{id}`；服务组没有服务 URL，不校验 `Origin` / `Referer`。
+
+管理端新增接口：
+
+```http
+GET /api/admin/service-groups
+POST /api/admin/service-groups
+PUT /api/admin/service-groups/{id}
+POST /api/admin/service-groups/{id}/tokens/refresh
+```
+
+创建服务组请求示例：
+
+```json
+{
+  "serviceGroupName": "core-group",
+  "authorizationCode": "abcd1234abcd1234abcd1234abcd1234",
+  "serviceIds": [1, 2]
+}
+```
+
+公开获取最新服务组密钥接口：
+
+```http
+POST /api/service-groups/token/latest
+Content-Type: application/json
+```
+
+```json
+{
+  "serviceGroupName": "core-group",
+  "authorizationCode": "abcd1234abcd1234abcd1234abcd1234"
+}
+```
+
+响应只返回服务组 access token，不返回 refresh token。当前 access token 剩余有效期大于 1 小时时直接返回当前 token；不足或等于 1 小时时，服务端通过数据库行锁幂等刷新，避免并发请求重复刷新。
+
+服务组鉴权复用 `/api/auth/verify`：
+
+```http
+POST /api/auth/verify
+Service-Name: core-group
+Target-Service-Name: billing
+Access-Token: <serviceGroupAccessJwt>
+```
+
+服务组鉴权成功表示 `core-group` 管理的 `billing` 服务鉴权通过，并按目标服务 `billing` 的 QPS/QPM 限流。未传 `Target-Service-Name` 时保持原服务鉴权行为不变。

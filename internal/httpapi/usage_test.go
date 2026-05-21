@@ -29,6 +29,9 @@ func TestHandleUsage(t *testing.T) {
 	if !hasEndpoint(usage.Endpoints, http.MethodPost, "/api/auth/verify") {
 		t.Fatalf("missing /api/auth/verify endpoint")
 	}
+	if !hasEndpoint(usage.Endpoints, http.MethodPost, "/api/service-groups/token/latest") {
+		t.Fatalf("missing /api/service-groups/token/latest endpoint")
+	}
 }
 
 func hasEndpoint(endpoints []usageEndpoint, method string, path string) bool {
