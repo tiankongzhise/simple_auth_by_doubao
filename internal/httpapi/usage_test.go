@@ -32,6 +32,19 @@ func TestHandleUsage(t *testing.T) {
 	if !hasEndpoint(usage.Endpoints, http.MethodPost, "/api/service-groups/token/latest") {
 		t.Fatalf("missing /api/service-groups/token/latest endpoint")
 	}
+	for _, endpoint := range []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/admin/service-groups"},
+		{http.MethodPost, "/api/admin/service-groups"},
+		{http.MethodPut, "/api/admin/service-groups/{id}"},
+		{http.MethodPost, "/api/admin/service-groups/{id}/tokens/refresh"},
+	} {
+		if !hasEndpoint(usage.Endpoints, endpoint.method, endpoint.path) {
+			t.Fatalf("missing %s %s endpoint", endpoint.method, endpoint.path)
+		}
+	}
 }
 
 func hasEndpoint(endpoints []usageEndpoint, method string, path string) bool {
